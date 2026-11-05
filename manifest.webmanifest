@@ -1,0 +1,11 @@
+{
+  "name": "魂契远征",
+  "short_name": "魂契远征",
+  "description": "战棋冒险 + 灵魂收集 RPG（手机竖屏）",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#120d1f",
+  "theme_color": "#120d1f",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
