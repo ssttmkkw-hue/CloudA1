@@ -24,7 +24,7 @@ function dexCatch(id) { const c = G.meta.codex[id] || (G.meta.codex[id] = { seen
 const codexCount = () => Object.values(G.meta.codex).filter(c => c.caught).length;
 
 /* ---------- 新的远征 ---------- */
-const START_GEAR = { knight: 'sword1', mage: 'staff1', summoner: 'sg_claw', ranger: 'bow1', priest: 'amulet', assassin: 'dagger' };
+const START_GEAR = { knight: 'sword1', mage: 'staff1', summoner: 'sg_claw', ranger: 'bow1', priest: 'amulet', assassin: 'dagger', paladin: 'leather', druid: 'cloth', berserker: 'axe1', monk: 'boots', bard: 'coin', alchemist: 'amulet', engineer: 'chain' };
 function newRun(cls) {
   const c = CLASSES[cls];
   const run = {
@@ -110,25 +110,32 @@ function genEncounter(run, kind) {
   const ri = run.region, fl = run.pos ? run.pos.r : 0, n = run.stats.battles;
   const scale = 1 + 0.03 * n + ri * 0.04;
   const pool = regionPool(ri);
-  const mk = (elite, minion) => {
+  const mk = elite => {
     const fam = wpick(pool, f => ({ C: 10, U: 6, R: 3, E: 1.5 }[f[0].rar] || 5));
     const st = pickStage(ri, fl, elite);
     return { sp: fam[st - 1].id, scale, elite: !!elite };
   };
+  let obj = { kind: 'rout' }, reinf = null;
+  if (kind === 'boss') obj = { kind: 'boss' };
+  else if (kind === 'elite') obj = chance(.5) ? { kind: 'leader' } : { kind: 'rout' };
+  else obj = wpick([{ kind: 'rout' }, { kind: 'leader' }, { kind: 'survive', limit: 5 + ri }, { kind: 'seize' }], o => ({ rout: 50, leader: 18, survive: 16, seize: 16 })[o.kind]);
   const enemies = [];
   if (kind === 'boss') {
     enemies.push({ sp: REGIONS[ri].boss, scale: 1 + ri * 0.03, boss: true });
-    for (let i = 0; i < 2; i++) { const e = mk(false); e.sp = pick(pool)[Math.min(2, ri)].id; enemies.push(e); }
+    for (let i = 0; i < 2 + (ri >= 2 ? 1 : 0); i++) { const e = mk(false); e.sp = pick(pool)[Math.min(2, ri)].id; enemies.push(e); }
   } else if (kind === 'elite') {
     enemies.push(mk(true));
-    for (let i = 0, c = 1 + (ri >= 1 ? 1 : 0); i < c; i++) enemies.push(mk(false));
+    for (let i = 0, c = 1 + (ri >= 1 ? 1 : 0) + (ri >= 2 ? 1 : 0); i < c; i++) enemies.push(mk(false));
   } else {
-    let cnt = 2 + (fl >= 2 ? 1 : 0) + (fl >= 5 ? 1 : 0) + (ri >= 1 ? 1 : 0) - (chance(.3) ? 1 : 0);
-    cnt = clamp(cnt, 2, 5);
+    let cnt = 2 + (fl >= 2 ? 1 : 0) + (fl >= 5 ? 1 : 0) + (ri >= 1 ? 1 : 0) + (ri >= 2 ? 1 : 0) - (chance(.3) ? 1 : 0);
+    if (obj.kind === 'survive') cnt -= 1;
+    cnt = clamp(cnt, 2, 6);
     for (let i = 0; i < cnt; i++) enemies.push(mk(false));
+    if (obj.kind === 'survive') reinf = { every: 2, count: 1 + (ri >= 2 ? 1 : 0), specs: [mk(false), mk(false), mk(false)] };
+    else if (chance(.3)) reinf = { every: 3, count: 1, specs: [mk(false), mk(false)] };
   }
-  enemies.forEach(e => dexSeen(e.sp));
-  return { region: ri, kind, enemies };
+  enemies.forEach(e => dexSeen(e.sp)); if (reinf) reinf.specs.forEach(e => dexSeen(e.sp));
+  return { region: ri, kind, enemies, obj, reinf };
 }
 
 /* ---------- 灵魂 ---------- */
@@ -174,11 +181,15 @@ function captureChance(k, run) {
 function releaseValue(soul) { return 10 + SPECIES[soul.sp].stage * 8 + soul.lv * 2 + (soul.star - 1) * 10; }
 
 /* ---------- 奖励生成 ---------- */
+const maxCopies = c => c.rar === 'S' ? 99 : c.rar === 'R' ? 1 : 2;           // 构筑限制：普通/优秀最多2张，稀有1张
+const copiesOf = (run, id) => run.deck.filter(x => x.id === id).length;
+const canAddCard = (run, id) => copiesOf(run, id) < maxCopies(CARDS[id]);
+const DECK_SOFT_MAX = 30;
 function cardRewardOptions(run, kind) {
-  const pool = Object.values(CARDS).filter(c => (c.cls === run.cls || c.cls === 'all') && 'CUR'.includes(c.rar));
+  const pool = Object.values(CARDS).filter(c => (c.cls === run.cls || c.cls === 'all') && 'CUR'.includes(c.rar) && canAddCard(run, c.id));
   const w = kind === 'boss' ? { C: 0, U: 45, R: 55 } : kind === 'elite' ? { C: 38, U: 47, R: 15 } : { C: 60, U: 34, R: 6 };
   const out = [];
-  while (out.length < 3) { const c = wpick(pool, c => w[c.rar] + (c.cls === run.cls ? 6 : 0)); if (!out.includes(c)) out.push(c); }
+  while (out.length < Math.min(3, pool.length)) { const c = wpick(pool, c => w[c.rar] + (c.cls === run.cls ? 6 : 0)); if (!out.includes(c)) out.push(c); }
   return out.map(c => c.id);
 }
 function randSoulOffer(run, minRar, n) {
@@ -190,8 +201,8 @@ function randSoulOffer(run, minRar, n) {
 function legendOffer() { return shuf(SPECIES_LIST.filter(s => s.legend)).slice(0, 3).map(s => s.id); }
 const CARD_PRICE = { C: 50, U: 78, R: 125 }, GEAR_PRICE = { C: 60, U: 95, R: 150, E: 220 }, SOUL_PRICE = { C: 60, U: 90, R: 140, E: 200 };
 function genShop(run) {
-  const cards = [], pool = Object.values(CARDS).filter(c => (c.cls === run.cls) && 'CUR'.includes(c.rar));
-  const neu = Object.values(CARDS).filter(c => c.cls === 'all' && 'CUR'.includes(c.rar));
+  const cards = [], pool = Object.values(CARDS).filter(c => (c.cls === run.cls) && 'CUR'.includes(c.rar) && canAddCard(run, c.id));
+  const neu = Object.values(CARDS).filter(c => c.cls === 'all' && 'CUR'.includes(c.rar) && canAddCard(run, c.id));
   while (cards.length < 3) { const c = wpick(pool, c => ({ C: 60, U: 33, R: 9 })[c.rar]); if (!cards.includes(c)) cards.push(c); }
   while (cards.length < 5) { const c = wpick(neu, c => ({ C: 60, U: 33, R: 9 })[c.rar]); if (!cards.includes(c)) cards.push(c); }
   const gear = [randGear(['weapon', 'armor', 'charm'], 'C', 'R'), randGear(null, 'C', 'R')];
@@ -204,8 +215,9 @@ function genShop(run) {
   };
 }
 function randCardId(run, rarity) {
-  const pool = Object.values(CARDS).filter(c => (c.cls === run.cls || c.cls === 'all') && (rarity === 'rare' ? c.rar === 'R' : 'CUR'.includes(c.rar)));
-  return wpick(pool, c => ({ C: 60, U: 33, R: 9 })[c.rar]).id;
+  let pool = Object.values(CARDS).filter(c => (c.cls === run.cls || c.cls === 'all') && (rarity === 'rare' ? c.rar === 'R' : 'CUR'.includes(c.rar)) && canAddCard(run, c.id));
+  if (!pool.length) pool = [CARDS.defend];
+  return wpick(pool, c => ({ C: 60, U: 33, R: 9 })[c.rar] || 1).id;
 }
 function addCardToDeck(run, id) { run.deck.push({ id, up: false }); }
 function applyRelicGold(run, g) { return Math.round(g * (1 + (heroMods(run).gold || 0) / 100)); }

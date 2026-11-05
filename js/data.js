@@ -145,8 +145,18 @@ const TOKENS = {
   boneguard: { n: '骸骨守卫', emoji: '🛡️', elem: 'dark', hp: 26, atk: 3, mov: 2, rng: 1, role: 'tank', sk: 'taunt' },
   wolf: { n: '野狼', emoji: '🐺', elem: 'wood', hp: 14, atk: 6, mov: 4, rng: 1, role: 'fighter' },
   clone: { n: '影分身', emoji: '👤', elem: 'dark', hp: 8, atk: 7, mov: 4, rng: 1, role: 'assassin' },
-  sapling: { n: '树苗', emoji: '🌱', elem: 'wood', hp: 10, atk: 3, mov: 2, rng: 1, role: 'tank' }
+  sapling: { n: '树苗', emoji: '🌱', elem: 'wood', hp: 10, atk: 3, mov: 2, rng: 1, role: 'tank' },
+  turret: { n: '炮塔', emoji: '🗼', elem: 'thunder', hp: 14, atk: 5, mov: 0, rng: 4, role: 'archer' },
+  mech: { n: '机械兵', emoji: '🤖', elem: 'thunder', hp: 18, atk: 6, mov: 3, rng: 2, role: 'fighter' },
+  bird: { n: '无人机', emoji: '🛸', elem: 'thunder', hp: 8, atk: 4, mov: 5, rng: 2, role: 'archer', ps: 'fly' },
+  bear: { n: '熊灵', emoji: '🐻', elem: 'wood', hp: 22, atk: 7, mov: 3, rng: 1, role: 'brute' },
+  treant: { n: '树人', emoji: '🌳', elem: 'wood', hp: 24, atk: 4, mov: 2, rng: 1, role: 'tank', sk: 'taunt' }
 };
+const RANDOM_TOKENS = ['wisp', 'skeleton', 'wolf', 'bear', 'treant', 'mech', 'bird', 'clone'];
+// 战场尺寸：区域越深战场越大
+const BOARD = [[6, 7], [7, 8], [8, 9]];
+// 战斗目标
+const OBJ_NAME = { rout: '歼灭敌人', leader: '击杀指挥官', survive: '坚持到援军撤退', seize: '占领据点', boss: '击败首领' };
 
 /* ========== 构建物种表 ========== */
 const SPECIES = {};

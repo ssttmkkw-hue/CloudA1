@@ -23,7 +23,7 @@ function cardHTML(d, o) {
     <div class="c-cost">${d.cost >= 99 ? '✖' : d.cost}</div><div class="c-name">${esc(d.n)}</div>
     <div class="c-art">${cardArt(d)}</div>
     <div class="c-type">${TYPE_N[d.ty]}${d.rar && 'CUR'.includes(d.rar) ? ' · ' + ({ C: '普通', U: '优秀', R: '稀有' })[d.rar] : ''}</div>
-    <div class="c-desc">${esc(cardDesc(d))}</div>${o.extra || ''}</div>`;
+    <div class="c-desc${cardDesc(d).length > 34 ? ' long' : ''}">${esc(cardDesc(d))}</div>${o.extra || ''}</div>`;
 }
 function spBrief(sp) {
   return `${elChip(sp.elem)}<em class="chip">${ROLES[sp.role].n}</em><em class="chip rar-${sp.rar}">${RAR[sp.rar][0]}</em>`;
@@ -60,14 +60,15 @@ function showTitle() {
 }
 A.sound = () => { Snd.on = !Snd.on; G.meta.sound = Snd.on; saveMeta(); showTitle(); };
 A.howto = () => showModal(`<h3>📜 玩法说明</h3><div class="howto">
-  <p><b>🗺 远征</b>：穿越 3 个区域（森林→遗迹→魔城），每个区域沿着路线选择战斗、事件、商店、营地，最后击败区域首领。</p>
-  <p><b>⚔ 战棋战斗</b>：战场是 6×7 的网格。你的英雄与召唤出的灵魂都可以<b>移动并攻击</b>（点击单位 → 点击蓝色格移动 → 点击敌人攻击；点击远处的敌人会自动走位）。</p>
-  <p><b>🃏 卡牌</b>：每回合抽 5 张牌，消耗能量打出。点击卡牌选中，再点击高亮目标释放。<b>召唤牌</b>代表你的灵魂军团，打出后灵魂降临战场。</p>
-  <p><b>🔮 收服灵魂</b>：战胜后有机会收服被击败的魔物。使用 <b>灵魂标记</b> 与 <b>灵魂水晶💎</b> 能提高成功率，重复收服会提升星级。</p>
-  <p><b>🌿 属性克制</b>：水>火>木>雷>水，光⇄暗互相克制。克制伤害 ×1.5，被克制 ×0.75。</p>
-  <p><b>⬆ 成长</b>：灵魂会升级并进化。装备、遗物、卡牌都能强化你的军团。</p>
-  <p><b>⚠ 危险区</b>：点击战场下方的危险区按钮，可查看敌人下一回合能攻击到的格子。</p>
-  <p><b>💠 魂晶</b>：每次远征结束获得魂晶，可在魂之殿堂永久强化、解锁新职业。</p>
+  <p><b>🗺 远征</b>：穿越 3 个区域（森林→遗迹→魔城），沿路线选择战斗、事件、商店、营地、宝藏、祭坛，击败区域首领。越深的区域，战场越大。</p>
+  <p><b>⚔ 战棋战斗</b>：英雄与灵魂都能<b>移动 + 普通攻击/技能</b>。近战打近战会被<b>反击</b>；远程单位站在敌人射程之外最安全。林地🌿受伤-25%，军旗🚩占领者每回合+1能量，泉水⛲回血，火药桶🛢️会爆炸。</p>
+  <p><b>🎯 战斗目标</b>：除了歼灭，还可能是<b>击杀指挥官</b>、<b>占领据点🏁</b>、<b>坚持数回合</b>（敌方不断有援军）。</p>
+  <p><b>🎁 宝箱</b>：派单位<b>走上宝箱</b>（占领）或<b>把它打碎</b>，都能获得奖励。</p>
+  <p><b>🃏 卡牌（炉石式）</b>：能量逐回合增长（第1回合3点，每回合+1，最高7）；每回合抽2张，<b>手牌不会弃掉</b>，上限10张。牌有攻击/技能/能力/召唤，以及<b>装备牌</b>（给单位永久强化）和<b>战术牌</b>（改造地形、调度单位），还有大量<b>随机牌</b>。</p>
+  <p><b>🔮 收服灵魂</b>：击败的魔物有机会收服，重复收服升星。灵魂会升级并进化，并以<b>召唤牌</b>的形式进入牌组。</p>
+  <p><b>🌿 属性克制</b>：水>火>木>雷>水，光⇄暗互相克制（×1.5 / ×0.75）。</p>
+  <p><b>📚 构筑</b>：普通/优秀同名牌最多 2 张，稀有牌 1 张；卡组过厚会稀释关键牌，营地可以精简卡组。</p>
+  <p><b>💠 魂晶</b>：每次远征结束获得魂晶，用来永久强化、解锁 13 个职业。</p>
   </div><div class="btnrow"><button class="btn pri" data-a="modal-close">明白了</button></div>`);
 
 /* ==========================================================
@@ -206,11 +207,11 @@ async function doBattle(node) {
 function maybeTutorial() {
   if (G.meta.tut) return; G.meta.tut = 1; saveMeta();
   showModal(`<h3>⚔ 战斗指南</h3><div class="howto">
-    <p>🃏 <b>点击手牌</b>选中，再点击<b>高亮的目标</b>释放；无需目标的牌再点一次即可使用。</p>
-    <p>👻 <b>紫色召唤牌</b>会把你的灵魂伙伴召唤到身旁，召唤后它们可以立刻行动。</p>
-    <p>👣 点击己方单位 → 点<b>蓝色格</b>移动 → 点<b>红色敌人</b>攻击（点远处敌人会自动走位）。</p>
-    <p>⚠ 点击底部<b>危险区</b>，可查看敌人下一回合的攻击范围。</p>
-    <p>🔮 击败敌人后有机会<b>收服灵魂</b>，壮大你的军团！</p></div>
+    <p>🃏 <b>点击手牌</b>选中，再点击<b>高亮的目标</b>释放；无需目标的牌再点一次即可使用。手牌不会弃掉，能量逐回合增长。</p>
+    <p>👻 <b>紫色召唤牌</b>把灵魂伙伴召到身旁，召唤后可以立刻行动。</p>
+    <p>👣 点击己方单位 → 点<b>蓝色格</b>移动 → 点<b>红色敌人</b>攻击。近战攻击会被<b>反击</b>！</p>
+    <p>🎁 把单位<b>走到宝箱上</b>或<b>打碎它</b>即可开箱；留意顶部的<b>战斗目标</b>。</p>
+    <p>⚠ 底部<b>危险区</b>按钮可查看敌人下一回合的攻击范围。</p></div>
     <div class="btnrow"><button class="btn pri" data-a="modal-close">开始战斗</button></div>`);
 }
 async function afterBattle(res, node, enc) {
@@ -238,7 +239,8 @@ async function afterBattle(res, node, enc) {
   const fell = res.fallen.map(u => run.souls.find(s => s.uid === u)).filter(Boolean);
   scr(`<div class="center-box"><div class="big-emoji">🏆</div><h2>胜利！</h2>
     <div class="sum-rows"><div class="row"><span>💰 金币</span><b>+${gold}</b></div>${healed ? `<div class="row"><span>💚 战后恢复</span><b>+${healed}</b></div>` : ''}
-    <div class="row"><span>⚔ 击败敌人</span><b>${res.kills.length}</b></div><div class="row"><span>⏱ 回合数</span><b>${res.turns}</b></div>
+    <div class="row"><span>🎯 目标</span><b>${OBJ_NAME[res.obj] || '歼灭'}</b></div><div class="row"><span>⚔ 击败敌人</span><b>${res.kills.length}</b></div><div class="row"><span>⏱ 回合数</span><b>${res.turns}</b></div>
+    ${(res.loot || []).map(t => `<div class="row"><span>🎁 宝箱</span><b>${t}</b></div>`).join('')}
     ${logs.map(l => `<div class="row"><span>${l.s ? SPECIES[l.s.sp].emoji : ''} ${esc(SPECIES[l.s.sp].name)}</span><b>${l.ev.some(e => e.t === 'evo') ? '进化！' : '升级 Lv' + l.s.lv}</b></div>`).join('')}
     ${fell.map(s => `<div class="row warn"><span>💤 ${esc(SPECIES[s.sp].name)}</span><b>下场战斗将休息</b></div>`).join('')}</div>
     <button class="btn pri big" data-a="v-next">继续</button></div>`);
@@ -255,6 +257,7 @@ async function afterBattle(res, node, enc) {
   saveRun();
 }
 A['v-next'] = () => fire('v-next');
+A['disc-pick'] = d => { closeModal(); fire('disc', d.id); };
 function showEvolution(e) {
   Snd.play('evo');
   showModal(`<div class="evo"><h3>✨ 进化！</h3><div class="evo-row"><div class="evo-a">${e.from.emoji}<small>${e.from.name}</small></div><div class="evo-arrow">➜</div><div class="evo-b">${e.to.emoji}<small>${e.to.name}</small></div></div>
@@ -324,7 +327,7 @@ A['rel-cancel'] = () => { closeModal(); fire('rel', false); };
 function cardRewardFlow(kind) {
   const ids = cardRewardOptions(G.run, kind); UI.cr = ids;
   scr(`<div class="hdr"><span></span><h2>🃏 选择一张卡牌</h2><span></span></div><p class="center dim small">加入你的卡组，或跳过获得 10 金币</p>
-    <div class="reward-cards">${ids.map((id, i) => cardHTML(CARDS[id], { cls: 'big', attrs: `data-a="cr-pick" data-i="${i}"` })).join('')}</div>
+    <div class="reward-cards">${ids.map((id, i) => cardHTML(CARDS[id], { cls: 'big', attrs: `data-a="cr-pick" data-i="${i}"`, extra: `<div class="c-own">已有 ${copiesOf(G.run, id)}/${maxCopies(CARDS[id]) > 9 ? '∞' : maxCopies(CARDS[id])}</div>` })).join('')}</div>
     <div class="foot"><button class="btn big" data-a="cr-skip">跳过 (+10💰)</button></div>`);
   return waitClick('cr');
 }
@@ -411,12 +414,17 @@ function doRest(node) {
     <div class="btnrow col">
     <button class="btn big" data-a="rest-heal">😴 休息 <small>恢复 ${Math.round(mx * .3)} 点生命（现有 ${run.hp}/${mx}）</small></button>
     <button class="btn big" data-a="rest-smith">🔨 锻造 <small>升级一张卡牌</small></button>
-    <button class="btn big" data-a="rest-soul">🔮 灵魂共鸣 <small>出战灵魂各 +8 经验，并消除疲惫</small></button></div></div>`);
+    <button class="btn big" data-a="rest-soul">🔮 灵魂共鸣 <small>出战灵魂各 +8 经验，并消除疲惫</small></button>
+    <button class="btn big" data-a="rest-prune">✂ 精简卡组 <small>移除一张卡牌（当前 ${run.deck.length} 张）</small></button></div></div>`);
 }
 A['rest-heal'] = () => { const run = G.run; run.hp = Math.min(heroMaxHp(run), run.hp + Math.round(heroMaxHp(run) * .3)); finishRest('你睡了个好觉，生命恢复了。'); };
 A['rest-smith'] = async () => {
   const i = await pickDeckCard('选择要升级的卡牌', c => !c.up && !CARDS[c.id].unplay && CARDS[c.id].cls !== 'curse');
   if (i == null) return; G.run.deck[i].up = true; finishRest(`「${CARDS[G.run.deck[i].id].n}」被强化了！`);
+};
+A['rest-prune'] = async () => {
+  const i = await pickDeckCard('选择要移除的卡牌'); if (i == null) return;
+  const nm = cdef(G.run.deck[i]).n; G.run.deck.splice(i, 1); finishRest(`「${nm}」被移出了卡组，牌库更精炼了。`);
 };
 A['rest-soul'] = async () => {
   const run = G.run, evos = [];
@@ -511,7 +519,7 @@ async function applyRes(list, lines) {
     if (r.chance) { const [p, a, b] = r.chance; await applyRes(Math.random() < p ? a : b, lines); }
     if (r.removeCard) { const i = await pickDeckCard('选择要移除的卡牌'); if (i != null) { lines.push(`🔥 移除了「${cdef(run.deck[i]).n}」`); run.deck.splice(i, 1); } }
     if (r.upgradeCard) { const i = await pickDeckCard('选择要升级的卡牌', c => !c.up && !CARDS[c.id].unplay); if (i != null) { run.deck[i].up = true; lines.push(`🔨 「${CARDS[run.deck[i].id].n}」被强化`); } }
-    if (r.dupCard) { const i = await pickDeckCard('选择要复制的卡牌', c => !CARDS[c.id].unplay); if (i != null) { run.deck.push(Object.assign({}, run.deck[i])); lines.push(`🪞 复制了「${cdef(run.deck[i]).n}」`); } }
+    if (r.dupCard) { const i = await pickDeckCard('选择要复制的卡牌', c => !CARDS[c.id].unplay && canAddCard(run, c.id)); if (i != null) { run.deck.push(Object.assign({}, run.deck[i])); lines.push(`🪞 复制了「${cdef(run.deck[i]).n}」`); } }
   }
 }
 async function eventFight(kind, lines) {
@@ -545,7 +553,8 @@ function renderArmy() {
       <h4>已装备</h4>${slots}<h4>背包</h4>${bag}</div>`;
   } else {
     const cnt = {}; run.deck.forEach(c => { const d = cdef(c); const k = d.id + (c.up ? '+' : ''); (cnt[k] = cnt[k] || { d, n: 0 }).n++; });
-    body = `<div class="list-scroll in-modal"><div class="deck-grid">${Object.values(cnt).map(x => cardHTML(x.d, { cls: 'mini', extra: x.n > 1 ? `<div class="c-cnt">×${x.n}</div>` : '' })).join('')}</div></div>`;
+    const sz = run.deck.length, types = {}; run.deck.forEach(c => { const t = cdef(c).ty; types[t] = (types[t] || 0) + 1; });
+    body = `<p class="dim small center">卡组 ${sz} 张${sz > DECK_SOFT_MAX ? ' · <b class="warn">过厚，关键牌更难抽到</b>' : sz < 12 ? ' · 偏薄，容易重复抽到' : ' · 大小合适'} ｜ ${Object.entries(types).map(([t, n]) => TYPE_N[t] + n).join(' ')}<br>构筑限制：普通/优秀同名最多2张，稀有最多1张</p><div class="list-scroll in-modal"><div class="deck-grid">${Object.values(cnt).map(x => cardHTML(x.d, { cls: 'mini', extra: x.n > 1 ? `<div class="c-cnt">×${x.n}</div>` : '' })).join('')}</div></div>`;
   }
   showModal(`<div class="army-hdr"><div class="tabs">${tabs}</div><button class="icon-btn" data-a="army-close">✕</button></div>${body}`, 'full');
 }

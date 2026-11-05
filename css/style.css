@@ -2,7 +2,7 @@
   --bg:#120d1f;--bg2:#1a1330;--panel:#211a3a;--panel2:#2c2350;--line:#3d3266;--text:#f1ecff;--dim:#9d93c4;
   --gold:#ffcf5a;--hp:#ff5d73;--blk:#6db7ff;--en:#b27dff;--ok:#6ee7a0;--warn:#ffb347;--bad:#ff6a6a;
   --fire:#ff6a3d;--water:#3da5ff;--wood:#5fd068;--thunder:#ffd23d;--dark:#a06bff;--light:#fff0a0;
-  --panel-h:118px;--hand-h:136px;--tile:min(calc(min(100vw,480px)/6),calc((100dvh - 50px - var(--panel-h) - var(--hand-h) - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom))/7));
+  --cols:6;--rows:7;--panel-h:118px;--hand-h:136px;--tile:min(calc(min(100vw,480px)/var(--cols)),calc((100dvh - 50px - var(--panel-h) - var(--hand-h) - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom))/var(--rows)));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 :root{color-scheme:dark}
@@ -106,13 +106,14 @@ small{font-size:.78em;opacity:.8;font-weight:400}
 .b-top{display:flex;align-items:center;gap:8px;padding:6px 10px;height:50px;flex:none}
 .b-hero{flex:1}.b-sub{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:2px}
 .b-hero .b-hpbar{height:20px}.b-hero .b-hpbar span{line-height:20px}
-.b-boardwrap{position:relative;flex:none;margin:0 auto;width:calc(var(--tile)*6);height:calc(var(--tile)*7)}
+.b-boardwrap{position:relative;flex:none;margin:0 auto;width:calc(var(--tile)*var(--cols));height:calc(var(--tile)*var(--rows))}
 .board{position:absolute;inset:0;border-radius:10px;overflow:hidden;background:#1a1330;box-shadow:0 0 0 2px #3d3266,0 6px 24px #000a}
-#tlayer,#ulayer,#flayer{position:absolute;inset:0}
-#ulayer,#flayer{pointer-events:none}
+#tlayer,#olayer,#ulayer,#flayer{position:absolute;inset:0}
+#olayer,#ulayer,#flayer{pointer-events:none}
 #ulayer .unit{pointer-events:auto}
 .tile{position:absolute;left:calc(var(--x)*var(--tile));top:calc(var(--y)*var(--tile));width:var(--tile);height:var(--tile);background:#241b42;display:flex;align-items:center;justify-content:center;font-size:calc(var(--tile)*.5);transition:background .15s}
 .tile.alt{background:#2a2049}
+.tile.forest{background:#1c3a2a}.tile.alt.forest{background:#1f4230}.tile.banner{background:#4a3a14;box-shadow:inset 0 0 0 2px #ffcf5a88}.tile.spring{background:#16405a}
 .tile.wall{background:#15101f}.tile.hazard{background:#4a1d1d}.tile.spring{background:#16405a}.tile.trap{box-shadow:inset 0 0 0 2px #ffcf5a77}
 .tile.danger::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,#ff304040 0 6px,#ff304015 6px 12px);pointer-events:none}
 .tile.hl-mv{background:#2b5fb5aa;box-shadow:inset 0 0 0 2px #7fb6ff}
@@ -230,3 +231,19 @@ small{font-size:.78em;opacity:.8;font-weight:400}
 #toast.show{opacity:1}
 ::-webkit-scrollbar{width:0;height:0}
 @media (max-height:700px){.logo{font-size:44px;margin-top:2dvh}.title-art{font-size:34px;margin:4px 0 10px}.card{width:76px;height:108px}:root{--hand-h:120px;--panel-h:98px}}
+
+/* v2：战场物件、新牌类型 */
+.obj{position:absolute;left:calc(var(--x)*var(--tile));top:calc(var(--y)*var(--tile));width:var(--tile);height:var(--tile);display:flex;align-items:center;justify-content:center}
+.obj .o-emoji{font-size:calc(var(--tile)*.58);filter:drop-shadow(0 2px 3px #000a);animation:bob 2.4s ease-in-out infinite}
+.obj.o-chest .o-emoji{filter:drop-shadow(0 0 8px #ffcf5a)}
+.obj.o-barrel .o-emoji{filter:drop-shadow(0 0 6px #ff6a3d)}
+.obj .u-hp{position:absolute;left:14%;right:14%;bottom:3px;height:7px;background:#000a;border-radius:4px;overflow:hidden}
+.obj .u-hp i{position:absolute;left:0;top:0;bottom:0;background:#ffcf5a}.obj .u-hp span{display:none}
+.unit.leader::after{content:"👑";position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-size:calc(var(--tile)*.3);z-index:5}
+.card.t-E{border-color:#7fe3a0;background:linear-gradient(180deg,#24593e,#12301f)}
+.card.t-T{border-color:#ffb86b;background:linear-gradient(180deg,#5c4020,#2c1f10)}
+.card.t-P{border-color:#ffcf5a}
+.c-own{position:absolute;bottom:2px;right:5px;font-size:9px;color:var(--dim)}
+.b-sub span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:68%}
+
+.c-desc.long{font-size:8.5px;line-height:1.2}.card.big .c-desc.long{font-size:10px}

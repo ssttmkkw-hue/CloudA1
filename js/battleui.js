@@ -4,14 +4,14 @@
    ========================================================== */
 const S = { mode: 'idle', sel: null, card: null, sk: null, hl: new Map(), danger: false, inspect: null, units: new Map(), tileEls: [] };
 const stHTML = u => Object.entries(u.st).filter(([k, v]) => v > 0 && STN[k]).map(([k, v]) => `<i title="${STN[k][0]}">${STN[k][1]}${v > 1 || ['burn', 'poison', 'str', 'thorns'].includes(k) ? v : ''}</i>`).join('');
-const tileGlyph = (t, ri) => t.trap ? '🪤' : t.t === 'wall' ? REGIONS[ri].wall : t.t === 'hazard' ? REGIONS[ri].hazard : t.t === 'spring' ? '⛲' : '';
+const tileGlyph = (t, ri) => t.goal ? '🏁' : t.trap ? '🪤' : t.t === 'wall' ? REGIONS[ri].wall : t.t === 'hazard' ? REGIONS[ri].hazard : t.t === 'spring' ? '⛲' : t.t === 'banner' ? '🚩' : t.t === 'forest' ? '🌿' : '';
 
 function clearSel() { S.mode = 'idle'; S.sel = null; S.card = null; S.sk = null; S.inspect = null; }
 
 V.start = function () {
   S.units.forEach(e => e.remove()); S.units.clear(); clearSel(); S.danger = false;
   const b = $('#board'); if (!b) return;
-  b.innerHTML = '<div id="tlayer"></div><div id="ulayer"></div><div id="flayer"></div>';
+  b.innerHTML = '<div id="tlayer"></div><div id="olayer"></div><div id="ulayer"></div><div id="flayer"></div>'; S.objs = new Map();
   const tl = $('#tlayer'); S.tileEls = [];
   for (let y = 0; y < BH; y++) {
     S.tileEls[y] = [];
@@ -29,6 +29,8 @@ function computeHL() {
     const u = S.sel;
     if (!u.moved && !u.acted) for (const t of reach(u).values()) set(t.x, t.y, 'mv');
     if (!u.acted) for (const f of foesOf(u)) { const at = approachTile(u, f); if (at) set(f.x, f.y, at.x === u.x && at.y === u.y ? 'at' : 'at2'); }
+    const rm = !u.moved && !u.acted ? reach(u) : new Map();
+    for (const o of B.objs) { if (o.hp <= 0) continue; if (o.type === 'chest' && rm.has(kxy(o.x, o.y))) { hl.set(kxy(o.x, o.y), 'mv'); continue; } if (!u.acted) { const at = approachTile(u, o); if (at) set(o.x, o.y, at.x === u.x && at.y === u.y ? 'at' : 'at2'); } }
   } else if (S.mode === 'skill' && S.sel && S.sk) {
     for (const t of skillTargets(S.sel, S.sk)) set(t.x, t.y, 'sk');
   } else if (S.mode === 'card' && S.card) {
@@ -60,7 +62,7 @@ V.sync = function () {
     }
     el.style.setProperty('--x', u.x); el.style.setProperty('--y', u.y);
     el.className = 'unit ' + (u.side === 'p' ? 'ally' : 'foe') + ' k-' + u.kind + (u.boss ? ' boss' : '') + (u.elite ? ' elite' : '') +
-      (S.sel === u ? ' sel' : '') + (S.inspect === u ? ' insp' : '') + (u.side === 'p' && B.phase === 'player' && u.acted && u.moved ? ' done' : '') +
+      (u.leader ? ' leader' : '') + (S.sel === u ? ' sel' : '') + (S.inspect === u ? ' insp' : '') + (u.side === 'p' && B.phase === 'player' && u.acted && u.moved ? ' done' : '') +
       (u.hp <= 0 ? ' dead' : '') + (el.classList.contains('spawn') ? ' spawn' : '') + (el.classList.contains('dying') ? ' dying' : '');
     if (u.elem) el.dataset.el = u.elem; else delete el.dataset.el;
     el.querySelector('.u-hp i').style.width = Math.max(0, u.hp / u.maxhp * 100) + '%';
@@ -72,18 +74,27 @@ V.sync = function () {
     setTimeout(() => el.classList.remove('spawn'), 400 * (SPEED || 0.01));
   }
   for (const [id, el] of S.units) if (!seen.has(id) && !el.classList.contains('dying')) { el.remove(); S.units.delete(id); }
+  const oseen = new Set();
+  for (const o of B.objs) {
+    if (o.hp <= 0) continue; oseen.add(o.id);
+    let el = S.objs.get(o.id);
+    if (!el) { el = document.createElement('div'); el.innerHTML = '<div class="o-emoji"></div><div class="u-hp"><i></i><span></span></div>'; el.querySelector('.o-emoji').textContent = o.emoji; $('#olayer').appendChild(el); S.objs.set(o.id, el); }
+    el.className = 'obj o-' + o.type; el.style.setProperty('--x', o.x); el.style.setProperty('--y', o.y);
+    el.querySelector('.u-hp i').style.width = (o.hp / o.maxhp * 100) + '%'; el.querySelector('.u-hp span').textContent = o.hp;
+  }
+  for (const [id, el] of S.objs) if (!oseen.has(id)) { el.remove(); S.objs.delete(id); }
   renderTop(); renderPanel(); renderHand(); renderBottom();
 };
 
 function renderTop() {
   const h = B.hero, run = G.run, r = REGIONS[B.region];
-  $('#b-region').textContent = `${r.emoji} ${r.n} · 回合${B.turn}`;
+  $('#b-region').textContent = `${r.emoji} ${r.n} · 回合${B.turn} · 🎯${objText()}`;
   $('#b-hpfill').style.width = Math.max(0, h.hp / h.maxhp * 100) + '%';
   $('#b-hptxt').textContent = `❤ ${Math.max(0, h.hp)}/${h.maxhp}` + (h.block ? `  🛡${h.block}` : '');
   $('#b-gold').textContent = '💰' + run.gold + '  💎' + run.crystals;
 }
 function renderBottom() {
-  $('#b-energy').textContent = B.energy; $('#b-emax').textContent = '/' + (B.maxEnergy + (B.pw.nrg || 0));
+  $('#b-energy').textContent = B.energy; $('#b-emax').textContent = '/' + Math.max(B.energy, B.energyMax);
   $('#b-draw').textContent = B.draw.length; $('#b-disc').textContent = B.disc.length;
   const et = $('#b-end'); et.disabled = !(B.phase === 'player' && !B.busy && !B.over);
   et.classList.toggle('glow', B.phase === 'player' && !B.busy && !B.hand.some(c => canPlay(c)));
@@ -142,7 +153,7 @@ function renderHand() {
       <div class="c-name">${esc(d.n)}</div>
       <div class="c-art">${cardArt(d)}</div>
       <div class="c-type">${d.soul ? ELEM[d.elem].n + '·召唤' : TYPE_N[d.ty]}</div>
-      <div class="c-desc">${esc(cardDesc(d))}</div></div>`;
+      <div class="c-desc${cardDesc(d).length > 34 ? ' long' : ''}">${esc(cardDesc(d))}</div></div>`;
   }).join('') + '</div>' || '';
   if (!n) h.innerHTML = '<div class="dim empty-hand">手牌已空</div>';
 }
@@ -154,7 +165,7 @@ function toast(msg, ms = 1400) {
 }
 async function onTile(x, y) {
   if (!B || B.busy || B.phase !== 'player' || B.over) return;
-  const u = unitAt(x, y), k = kxy(x, y), h = S.hl.get(k);
+  const u = unitAt(x, y), k = kxy(x, y), h = S.hl.get(k), ob = objAt(x, y);
   if (S.mode === 'card') {
     if (h === 'cd') { const c = S.card; clearSel(); await playCard(c, { x, y }); return; }
     clearSel(); V.sync(); return;
@@ -173,9 +184,11 @@ async function onTile(x, y) {
       clearSel(); S.inspect = u; V.sync(); return;
     }
     if (h === 'mv') { await playerMove(s, x, y); V.sync(); return; }
+    if (ob && (h === 'at' || h === 'at2')) { await playerAttackAuto(s, ob); if (s.hp > 0 && B.units.includes(s)) { S.sel = s; S.mode = 'unit'; } V.sync(); return; }
     clearSel(); V.sync(); return;
   }
   // idle
+  if (!u && ob) { toast(ob.type === 'chest' ? '🎁 宝箱：派单位走上去占领，或攻击它直到打开' : '🛢️ 火药桶：被摧毁时爆炸，波及周围所有单位'); return; }
   if (u && u.side === 'p') { clearSel(); S.sel = u; S.mode = 'unit'; }
   else if (u) { clearSel(); S.inspect = u; }
   else clearSel();
@@ -269,3 +282,11 @@ function battleShell() {
       <button class="btn pri end" id="b-end" data-a="endturn">结束回合</button>
     </div>`;
 }
+
+V.toast = (m, ms) => toast(m, ms);
+V.discover = function (ids) {
+  if (SPEED === 0) return Promise.resolve(pick(ids));
+  const rows = ids.map((id, i) => cardHTML(CARDS[id], { cls: 'big', attrs: `data-a="disc-pick" data-id="${id}"` })).join('');
+  showModal(`<h3>🔍 发现</h3><p class="center dim small">选择一张牌加入手牌</p><div class="reward-cards">${rows}</div>`, 'wide');
+  return waitClick('disc');
+};
