@@ -5,9 +5,10 @@
   --panel-h:118px;--hand-h:136px;--tile:min(calc(min(100vw,480px)/6),calc((100dvh - 50px - var(--panel-h) - var(--hand-h) - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom))/7));
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+:root{color-scheme:dark}
 html,body{margin:0;height:100%;background:#0a0714;color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;overscroll-behavior:none;touch-action:manipulation}
 body{display:flex;justify-content:center}
-#app{width:100%;max-width:480px;height:100dvh;position:relative;overflow:hidden;background:var(--bg)}
+#app{width:100%;max-width:480px;height:100%;position:relative;overflow:hidden;background:var(--bg)}
 .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:radial-gradient(120% 80% at 50% 0%,#241a45,var(--bg) 60%);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 button{font-family:inherit;color:inherit;cursor:pointer}
 .dim{color:var(--dim)}.small{font-size:12px}.center{text-align:center}.warn{color:var(--warn)}.ok{color:var(--ok)}.gold{color:var(--gold)}
